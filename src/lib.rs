@@ -2,6 +2,7 @@ mod utils;
 
 use wasm_bindgen::prelude::*;
 use std::fmt;
+use std::ptr;
 use ru_gameboy::vm::{WIDTH, HEIGHT, Vm};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -25,14 +26,16 @@ pub fn greet() {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pixel {
     Black = 0,
-    LGrey = 1,
-    DGrey = 2,
+    DGrey = 1,
+    LGrey = 2,
     White = 3
 }
 
 #[wasm_bindgen]
 pub struct Gameboy {
     pixels: Vec<Pixel>,
+    vm: Option<Vm>,
+    cartridge: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -50,8 +53,12 @@ impl Gameboy {
             })
             .collect();
 
+        let cartridge = vec![0;0x8000];
+
         Self {
             pixels,
+            vm: None,
+            cartridge,
         }
     }
     pub fn width(&self) -> u32 {
@@ -62,30 +69,31 @@ impl Gameboy {
         HEIGHT as u32
     }
 
-    pub fn pixels(&self) -> *const Pixel {
-        self.pixels.as_ptr()
-    }
-
-    pub fn render(&self) -> String {
-        self.to_string()
-    }
-}
-
-impl fmt::Display for Gameboy {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for line in self.pixels.as_slice().chunks(WIDTH as usize) {
-            for &pixel in line {
-                let symbol = match pixel {
-                    Pixel::Black => '◼',
-                    Pixel::DGrey => '◼',
-                    Pixel::LGrey => '◻',
-                    Pixel::White => '◻',
-                };
-                write!(f, "{}", symbol)?;
-            }
-            write!(f, "\n")?;
+    pub fn get_buffer(&self) -> *const u32 {
+        match self.vm {
+            Some(ref vm) => vm.buffer.as_ptr(),
+            None => ptr::null(),
         }
+    }
 
-        Ok(())
+    pub fn get_cartridge(&self) -> *const u8 {
+        self.cartridge.as_ptr()
+    }
+
+    pub fn tick(&mut self) {
+        if let Some(ref mut vm) = self.vm {
+            vm.run();
+        }
+    }
+
+    pub fn dump(&self) -> String {
+        match self.vm {
+            Some(ref vm) => vm.cpu.dump(),
+            None => "".to_string(),
+        }
+    }
+
+    pub fn set_cartridge(&mut self) {
+        self.vm = Some(Vm::new(self.cartridge.clone()));
     }
 }
