@@ -1,7 +1,6 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
-use std::fmt;
 use std::ptr;
 use ru_gameboy::vm::{WIDTH, HEIGHT, Vm};
 
@@ -10,16 +9,6 @@ use ru_gameboy::vm::{WIDTH, HEIGHT, Vm};
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-extern {
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, wasm-gameboy!");
-}
 
 #[wasm_bindgen]
 #[repr(u8)]
@@ -41,18 +30,7 @@ pub struct Gameboy {
 #[wasm_bindgen]
 impl Gameboy {
     pub fn new() -> Self {
-        let pixels = (0..WIDTH*HEIGHT)
-            .map(|i| {
-                match i % 4 {
-                    0 => Pixel::Black,
-                    1 => Pixel::DGrey,
-                    2 => Pixel::LGrey,
-                    3 => Pixel::White,
-                    _ => unreachable!(),
-                }
-            })
-            .collect();
-
+        let pixels = vec![Pixel::Black;WIDTH * HEIGHT];
         let cartridge = vec![0;0x8000];
 
         Self {
